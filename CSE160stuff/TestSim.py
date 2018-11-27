@@ -13,6 +13,7 @@ class TestSim:
     CMD_PING = 0
     CMD_NEIGHBOR_DUMP = 1
     CMD_ROUTE_DUMP=3
+    CMD_PRINT_MESSAGE = 7
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -28,8 +29,9 @@ class TestSim:
     # Project 3
     TRANSPORT_CHANNEL="transport";
 
-    # Personal Debuggin Channels for some of the additional models implemented.
+    # Personal Debugging Channels for some of the additional models implemented.
     HASHMAP_CHANNEL="hashmap";
+    MAPLIST_CHANNEL="maplist"
 
     # Initialize Vars
     numMote=0
@@ -119,6 +121,9 @@ class TestSim:
     def ping(self, source, dest, msg):
         self.sendCMD(self.CMD_PING, source, "{0}{1}".format(chr(dest),msg));
 
+    def printMessage(self, source, msg):
+        self.sendCMD(self.CMD_PRINT_MESSAGE, source, msg)
+
     def neighborDMP(self, destination):
         self.sendCMD(self.CMD_NEIGHBOR_DUMP, destination, "neighbor command");
 
@@ -129,11 +134,7 @@ class TestSim:
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
 
-    def printNeighbors(self, source):
-        self.sendCMD(4, source, "printing command")
-
 def main():
-    print "test"
     s = TestSim();
     s.runTime(10);
     s.loadTopo("long_line.topo");
@@ -141,16 +142,13 @@ def main():
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
-    #s.addChannel(s.FLOODING_CHANNEL);
-    s.addChannel(s.NEIGHBOR_CHANNEL);
-    s.addChannel(s.ROUTING_CHANNEL)
 
-    s.runTime(4);
+    s.runTime(20);
     s.ping(1, 2, "Hello, World");
-    
-    s.runTime(4);
-    s.ping(14, 5, "Hi!");
-    //s.runTime(20);
+    s.runTime(10);
+    s.ping(1, 3, "Hi!");
+    s.runTime(20);
+    s.neighborDMP(2);
 
 if __name__ == '__main__':
     main()

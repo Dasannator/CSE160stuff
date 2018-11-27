@@ -1,6 +1,5 @@
 #include "packet.h"
 #include "CommandMsg.h"
-#include "dvrT.h"
 
 #ifndef __AM_TYPES_H__
 #define __AM_TYPES_H__

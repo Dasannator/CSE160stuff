@@ -12,7 +12,8 @@
 enum{
 	PACKET_HEADER_LENGTH = 8,
 	PACKET_MAX_PAYLOAD_SIZE = 28 - PACKET_HEADER_LENGTH,
-	MAX_TTL = 19
+	MAX_TTL = 15,
+	BETTER_TTL = 22
 };
 
 
@@ -24,13 +25,6 @@ typedef nx_struct pack{
 	nx_uint8_t protocol;
 	nx_uint8_t payload[PACKET_MAX_PAYLOAD_SIZE];
 }pack;
-
-typedef nx_struct dvrTable{
-    nx_uint16_t nexthop;
-    nx_uint16_t dst;
-    nx_uint16_t cost;
-    nx_uint16_t DVRTTL;//Sequence Number
-}dvrTable;
 
 /*
  * logPack
