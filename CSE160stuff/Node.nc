@@ -24,6 +24,17 @@ uses interface Receive;
 uses interface SimpleSend as Sender;
 
 uses interface CommandHandler;
+
+//uses interface Receive as LinkStateProtoS;
+
+uses interface Transport;
+
+//uses interface LinkStateInterface;
+
+uses interface Timer<TMilli> as acceptTimer;
+uses interface Timer<TMilli> as writeTimer;
+uses interface List<socket_t> as serverConnections;
+
 uses interface SimpleSend as Flood;
 uses interface Receive as FloodReceive;
 uses interface Receive as PingReplyReceive;
@@ -42,9 +53,20 @@ uses interface CounterClient;
 
 implementation{
 pack sendPackage;
+pack receivePackage;
+socket_t socket;
+socket_t newSocket = 0;
+uint8_t STR_SIZE = 101;
+uint16_t nb;
+uint16_t numToSend;
+uint8_t bytesWrittenOrRead;
+uint8_t isNewConnection = 0;
+char* testString = "This is a Test.";
+uint8_t writeableBuff[32];
 
+void pingReply(uint16_t destination, uint8_t *payload);
 // Prototypes
-void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
+//void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
 event void Boot.booted(){
 call AMControl.start();
@@ -63,6 +85,7 @@ call AMControl.start();
 }
 
 event void AMControl.stopDone(error_t err){}
+
 
 event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 dbg(GENERAL_CHANNEL, "Packet Received\n");
@@ -115,6 +138,15 @@ makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PA
 dbg(GENERAL_CHANNEL, "PING EVENT:%s\n",sendPackage.payload);
 //call Flood.send(sendPackage, destination);
 call RouteSend.send(sendPackage, destination);
+//call LinkStateProtoS.send(sendPackage, destination);
+}
+
+void pingReply(uint16_t destination, uint8_t *payload) {
+  dbg(GENERAL_CHANNEL, "PING REPLY EVENT \n");
+
+  makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, PROTOCOL_PINGREPLY, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+  //call LinkStateProtoS.send(sendPackage, destination)
+  call RouteSend.send(sendPackage, destination);
 }
 
 event void CommandHandler.printNeighbors(){
@@ -129,8 +161,13 @@ event void CommandHandler.printLinkState(){}
 
 event void CommandHandler.printDistanceVector(){}
 
-event void CommandHandler.setTestServer(){
+event void CommandHandler.setTestServer(uint8_t port){
 socket_t *s;
+socket_addr_t reqPort;
+dbg(GENERAL_CHANNEL, "New Serv Event \n");
+
+reqPort.node = TOS_NODE_ID;
+reqPort.port = port;
 socket_port_t src = 20;
 
 s = call Transport.socket();
@@ -138,16 +175,30 @@ call Transport.bind(s, src);
 call Transport.listen(s);
 }
 
-event void CommandHandler.setTestClient(){
+event void CommandHandler.setTestClient(uint16_t dest, uint8_t srcPort, uint8_t destPort, uint16_t num){
 socket_t *s;
-socket_addr_t addr;
+socket_addr_t reqPort;
+socket_addr_t serverInfo;
+dbg(GENERAL_CHANNEL, "New Client EVENT \n");
+dbg(GENERAL_CHANNEL, "NUM: %d \n" , num);
+
+reqPort.node = TOS_NODE_ID;
+reqPort.port = srcPort;
 s = call Transport.socket();
-call Transport.bind(s, 70);
+call Transport.bind(s, &reqPort);
+serverInfo.node = dest;
+serverInfo.port = destPort;
+  call Transport.connect(socket, &serverInfo);
+
+  isNewConnection = 1;
+  nb = num;
+  numToSend = 0;
+  call writeTimer.startPeriodic(30000);
 
 // Well known server
-addr.addr = 1;
-addr.port = 20;
-call Transport.connect(s, addr);
+//addr.addr = 1;
+//addr.port = 20;
+//call Transport.connect(s, addr);
 }
 
 event void Transport.accept(socket_t *s){
@@ -162,6 +213,50 @@ event void CommandHandler.setAppServer(){}
 
 event void CommandHandler.setAppClient(){}
 
+event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort){
+  socket_t toClose;
+  toClose = call Transport.findSocket(dest, srcPort, destPort);
+  if (toClose !=0){
+    call Transport.close(toClose);
+  }
+}
+
+event void acceptTimer.fired(){
+  socket_t temp;
+  int i sz;
+  temp = call Transport.accept(socket);
+  if (temp != 0) {
+    call serverConnections.pushback(temp);
+  }
+  sz = call serverConnections.size();
+  for (i = 0; i <sz; i++) {
+    newSocket = call serverConnections.get(i);
+    nb = call Transport.read(newSocket, &numToSend, 2);
+
+    while (nb !=0) {
+      dbg(GENERAL_CHANNEL, "Socket %d received number: %d\n", newSocket, numToSend);
+      nb = call Transport.read(newSocket, &numToSend, 2);
+    }
+  }
+}
+
+eevent void writeTimer.fired() {
+  if (isNewConnection == 1) {
+    while (isNewConnection) {
+      bytesWrittenOrRead = call Transport.write(socket, &numToSend, 2);
+      if (bytesWrittenOrRead == 2) {
+        numToSend++;
+      }
+      if (numToSend == nb+1) {
+        dbg(GENERAL_CHANNEL, "CLient done sending ");
+        isNewConnection = 0;
+      }
+      if (bytesWrittenOrRead == 0)
+      break;
+    }
+  }
+}
+
 void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
 Package->src = src;
 Package->dest = dest;
@@ -171,4 +266,3 @@ Package->protocol = protocol;
 memcpy(Package->payload, payload, length);
 }
 }
-
