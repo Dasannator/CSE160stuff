@@ -166,9 +166,9 @@ socket_t *s;
 socket_addr_t reqPort;
 dbg(GENERAL_CHANNEL, "New Serv Event \n");
 
-reqPort.socket_store_t = TOS_NODE_ID;
+reqPort.addr = TOS_NODE_ID;
 reqPort.port = port;
-socket_port_t src = 20;
+//socket_port_t src = 20;
 
 s = call Transport.socket();
 call Transport.bind(s, &reqPort);
@@ -182,12 +182,12 @@ socket_addr_t serverInfo;
 dbg(GENERAL_CHANNEL, "New Client EVENT \n");
 dbg(GENERAL_CHANNEL, "NUM: %d \n" , num);
 
-reqPort.socket_store_t = TOS_NODE_ID;
+reqPort.addr = TOS_NODE_ID;
 reqPort.port = srcPort;
 s = call Transport.socket();
 call Transport.bind(s, &reqPort);
-//serverInfo.node = dest;
-//serverInfo.port = destPort;
+serverInfo.addr = dest;
+serverInfo.port = destPort;
   call Transport.connect(socket, &serverInfo);
 
   isNewConnection = 1;
@@ -201,11 +201,11 @@ call Transport.bind(s, &reqPort);
 //call Transport.connect(s, addr);
 }
 
-event void Transport.accept(socket_t *s){
+event void Transport.accept(socket_t s){
 dbg(TRANSPORT_CHANNEL, "Server connected\n");
 }
 
-event void Transport.connectDone(socket_t *s){
+event void Transport.connectDone(socket_t s){
 dbg(TRANSPORT_CHANNEL, "Client Connected.\n");
 }
 
@@ -223,7 +223,7 @@ event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_
 
 event void acceptTimer.fired(){
   socket_t temp;
-  int i sz;
+  int sz;
   temp = call Transport.accept(socket);
   if (temp != 0) {
     call serverConnections.pushback(temp);
