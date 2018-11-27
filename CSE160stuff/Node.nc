@@ -27,7 +27,7 @@ uses interface CommandHandler;
 
 //uses interface Receive as LinkStateProtoS;
 
-uses interface Transport;
+//uses interface Transport;
 
 //uses interface LinkStateInterface;
 
@@ -166,12 +166,12 @@ socket_t *s;
 socket_addr_t reqPort;
 dbg(GENERAL_CHANNEL, "New Serv Event \n");
 
-reqPort.node = TOS_NODE_ID;
+reqPort.socket_store_t = TOS_NODE_ID;
 reqPort.port = port;
 socket_port_t src = 20;
 
 s = call Transport.socket();
-call Transport.bind(s, src);
+call Transport.bind(s, &reqPort);
 call Transport.listen(s);
 }
 
@@ -182,12 +182,12 @@ socket_addr_t serverInfo;
 dbg(GENERAL_CHANNEL, "New Client EVENT \n");
 dbg(GENERAL_CHANNEL, "NUM: %d \n" , num);
 
-reqPort.node = TOS_NODE_ID;
+reqPort.socket_store_t = TOS_NODE_ID;
 reqPort.port = srcPort;
 s = call Transport.socket();
 call Transport.bind(s, &reqPort);
-serverInfo.node = dest;
-serverInfo.port = destPort;
+//serverInfo.node = dest;
+//serverInfo.port = destPort;
   call Transport.connect(socket, &serverInfo);
 
   isNewConnection = 1;
@@ -240,7 +240,7 @@ event void acceptTimer.fired(){
   }
 }
 
-eevent void writeTimer.fired() {
+event void writeTimer.fired() {
   if (isNewConnection == 1) {
     while (isNewConnection) {
       bytesWrittenOrRead = call Transport.write(socket, &numToSend, 2);
