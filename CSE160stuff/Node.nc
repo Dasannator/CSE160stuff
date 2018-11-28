@@ -24,7 +24,7 @@ module Node {
     uses interface DistanceVectorRouting as DistanceVectorRouting;
     uses interface Timer<TMilli> as acceptTimer;
     uses interface Timer<TMilli> as writeTimer;
-    uses interface List<socket_t> as serverConnections;
+    //uses interface List<socket_t> as serverConnections;
 
 }
 
@@ -84,19 +84,19 @@ implementation {
         dbg(GENERAL_CHANNEL, "%s\n", payload);
     }
 
-    event void CommandHandler.setTestServer() {}
+    event void CommandHandler.setTestServer(uint8_t port) {}
 
-    event void CommandHandler.setTestClient() {}
+    event void CommandHandler.setTestClient(uint16_t dest, uint8_t srcPort, uint8_t destPort, uint16_t num) {}
 
     event void CommandHandler.setAppServer() {}
 
     event void CommandHandler.setAppClient() {}
 
-    event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort){
-  socket_t toClose;
-  toClose = call Transport.findSocket(dest, srcPort, destPort);
-  if (toClose !=0){
-    call Transport.close(toClose);
+  //  event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort){
+  //socket_t toClose;
+  //toClose = call Transport.findSocket(dest, srcPort, destPort);
+//  if (toClose !=0){
+//    call Transport.close(toClose);
   }
 }
 
