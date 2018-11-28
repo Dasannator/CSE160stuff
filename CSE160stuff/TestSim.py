@@ -8,12 +8,13 @@ from TOSSIM import *
 from CommandMsg import *
 
 class TestSim:
-    moteids=[]
     # COMMAND TYPES
     CMD_PING = 0
     CMD_NEIGHBOR_DUMP = 1
     CMD_ROUTE_DUMP=3
-    CMD_PRINT_MESSAGE = 7
+    CMD_TEST_CLIENT = 4
+    CMD_TEST_SERVER = 5
+    CMD_CLOSE_CONNECTION = 7
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -29,9 +30,8 @@ class TestSim:
     # Project 3
     TRANSPORT_CHANNEL="transport";
 
-    # Personal Debugging Channels for some of the additional models implemented.
+    # Personal Debuggin Channels for some of the additional models implemented.
     HASHMAP_CHANNEL="hashmap";
-    MAPLIST_CHANNEL="maplist"
 
     # Initialize Vars
     numMote=0
@@ -58,10 +58,6 @@ class TestSim:
             if s:
                 print " ", s[0], " ", s[1], " ", s[2];
                 self.r.add(int(s[0]), int(s[1]), float(s[2]))
-                if not int(s[0]) in self.moteids:
-                    self.moteids=self.moteids+[int(s[0])]
-                if not int(s[1]) in self.moteids:
-                    self.moteids=self.moteids+[int(s[1])]
 
     # Load a noise file and apply it.
     def loadNoise(self, noiseFile):
@@ -76,10 +72,10 @@ class TestSim:
             str1 = line.strip()
             if str1:
                 val = int(str1)
-            for i in self.moteids:
+            for i in range(1, self.numMote+1):
                 self.t.getNode(i).addNoiseTraceReading(val)
 
-        for i in self.moteids:
+        for i in range(1, self.numMote+1):
             print "Creating noise model for ",i;
             self.t.getNode(i).createNoiseModel()
 
@@ -91,7 +87,7 @@ class TestSim:
 
     def bootAll(self):
         i=0;
-        for i in self.moteids:
+        for i in range(1, self.numMote+1):
             self.bootNode(i);
 
     def moteOff(self, nodeID):
@@ -121,14 +117,20 @@ class TestSim:
     def ping(self, source, dest, msg):
         self.sendCMD(self.CMD_PING, source, "{0}{1}".format(chr(dest),msg));
 
-    def printMessage(self, source, msg):
-        self.sendCMD(self.CMD_PRINT_MESSAGE, source, msg)
-
     def neighborDMP(self, destination):
         self.sendCMD(self.CMD_NEIGHBOR_DUMP, destination, "neighbor command");
 
     def routeDMP(self, destination):
         self.sendCMD(self.CMD_ROUTE_DUMP, destination, "routing command");
+
+    def newServer(self, target, port):
+        self.sendCMD(self.CMD_TEST_SERVER, target, "{0}".format(chr(port)));
+
+    def newClient(self, target, dest, srcPort, destPort, num):
+        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}{3}{4}".format(chr(dest),chr(srcPort),chr(destPort),chr(num & 0xFF), chr((num >> 8) & 0xFF)));
+
+    def clientClose(self, target, dest, srcPort, destPort):
+        self.sendCMD(self.CMD_CLOSE_CONNECTION, target, "{0}{1}{2}".format(chr(dest),chr(srcPort),chr(destPort)));
 
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
@@ -148,7 +150,6 @@ def main():
     s.runTime(10);
     s.ping(1, 3, "Hi!");
     s.runTime(20);
-    s.neighborDMP(2);
 
 if __name__ == '__main__':
     main()

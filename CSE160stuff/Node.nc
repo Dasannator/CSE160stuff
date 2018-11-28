@@ -22,6 +22,10 @@ module Node {
     uses interface Flooding;
     uses interface NeighborDiscovery as NeighborDiscovery;
     uses interface DistanceVectorRouting as DistanceVectorRouting;
+    uses interface Timer<TMilli> as acceptTimer;
+    uses interface Timer<TMilli> as writeTimer;
+    uses interface List<socket_t> as serverConnections;
+
 }
 
 implementation {
@@ -69,7 +73,7 @@ implementation {
     }
 
     event void CommandHandler.printRouteTable() {
-        call DistanceVectorRouting.printRouteTable();
+        //call DistanceVectorRouting.printRouteTable();
     }
 
     event void CommandHandler.printLinkState() {}
@@ -88,4 +92,49 @@ implementation {
 
     event void CommandHandler.setAppClient() {}
 
+    event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort){
+  socket_t toClose;
+  toClose = call Transport.findSocket(dest, srcPort, destPort);
+  if (toClose !=0){
+    call Transport.close(toClose);
+  }
+}
+
+
+}
+
+event void acceptTimer.fired(){
+  socket_t temp;
+  int sz;
+  temp = call Transport.accept(socket);
+  if (temp != 0) {
+    call serverConnections.pushback(temp);
+  }
+  sz = call serverConnections.size();
+  for (int i = 0; i <sz; i++) {
+    newSocket = call serverConnections.get(i);
+    nb = call Transport.read(newSocket, &numToSend, 2);
+
+    while (nb !=0) {
+      dbg(GENERAL_CHANNEL, "Socket %d received number: %d\n", newSocket, numToSend);
+      nb = call Transport.read(newSocket, &numToSend, 2);
+    }
+  }
+}
+
+event void writeTimer.fired() {
+  if (isNewConnection == 1) {
+    while (isNewConnection) {
+      bytesWrittenOrRead = call Transport.write(socket, &numToSend, 2);
+      if (bytesWrittenOrRead == 2) {
+        numToSend++;
+      }
+      if (numToSend == nb+1) {
+        dbg(GENERAL_CHANNEL, "CLient done sending ");
+        isNewConnection = 0;
+      }
+      if (bytesWrittenOrRead == 0)
+      break;
+    }
+  }
 }
